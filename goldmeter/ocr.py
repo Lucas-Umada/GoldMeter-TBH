@@ -3,10 +3,43 @@ tesseract invocation, and parsing of gold amounts / stage labels."""
 
 from __future__ import annotations
 
+import os
 import re
+import shutil
+from pathlib import Path
 
 import pytesseract
 from PIL import Image, ImageOps
+
+
+def _find_tesseract() -> None:
+    """On Windows, locate tesseract.exe when it isn't on PATH.
+
+    The UB-Mannheim/winget installer defaults to Program Files and does not
+    add itself to PATH.
+    """
+    if shutil.which("tesseract"):
+        return
+    candidates = [
+        Path(os.environ.get("ProgramFiles", r"C:\Program Files")),
+        Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")),
+        Path(os.environ.get("LOCALAPPDATA", "")) / "Programs",
+    ]
+    for base in candidates:
+        exe = base / "Tesseract-OCR" / "tesseract.exe"
+        if exe.is_file():
+            pytesseract.pytesseract.tesseract_cmd = str(exe)
+            return
+
+
+if os.name == "nt":
+    _find_tesseract()
+
+
+def tesseract_available() -> bool:
+    """True when the tesseract binary pytesseract will call actually exists."""
+    cmd = pytesseract.pytesseract.tesseract_cmd
+    return shutil.which(cmd) is not None or Path(cmd).is_file()
 
 GOLD_WHITELIST = "0123456789.,KMBTkmbt"
 STAGE_WHITELIST = "0123456789-"

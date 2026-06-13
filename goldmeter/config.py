@@ -33,8 +33,9 @@ class Region:
 
 @dataclass
 class Config:
-    # Substring matched (case-insensitive) against X window titles.
-    window_title: str = "Task Bar Hero"
+    # Substring matched (case-insensitive) against window titles.
+    # The game's real title has no spaces: "TaskBarHero".
+    window_title: str = "TaskBarHero"
     poll_interval: float = 1.0
     # OCR upscale factor applied before tesseract; pixel fonts need 3-6x.
     ocr_scale: int = 4
@@ -61,4 +62,6 @@ class Config:
         return cfg
 
     def is_calibrated(self) -> bool:
-        return self.gold_region.is_valid() and self.stage_region.is_valid()
+        # Only gold is required; the stage region can be skipped at
+        # calibration and the stage typed manually in the meter instead.
+        return self.gold_region.is_valid()

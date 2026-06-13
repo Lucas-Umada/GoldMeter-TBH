@@ -90,7 +90,43 @@ class Tracker:
         if gold is not None:
             self._update_gold(gold)
 
+    # -- start/stop ------------------------------------------------------
+
+    def start(self, stage: str | None = None, now: float | None = None) -> None:
+        """Begin a tracking segment.
+
+        The gold baseline resets to the next reading, so gold gained while
+        not tracking is never counted as earned.
+        """
+        now = time.time() if now is None else now
+        self._pending_stage = None
+        self._pending_gold = None
+        self.last_gold = None
+        if stage is not None:
+            self.current_stage = stage
+        if self.current_stage is not None and self.current_record is None:
+            self.current_record = StageRecord(stage=self.current_stage, start_time=now)
+
+    def stop(self, now: float | None = None) -> None:
+        """End the segment: the current stage record is finalized into the
+        history (and the session log), where the ranking picks it up."""
+        now = time.time() if now is None else now
+        if self.current_record is not None:
+            self.current_record.end_time = now
+            self.history.append(self.current_record)
+            self._log_record(self.current_record)
+            self.current_record = None
+        self._pending_stage = None
+        self._pending_gold = None
+
     # -- stage ---------------------------------------------------------
+
+    def set_stage(self, stage: str, now: float | None = None) -> None:
+        """Manual stage override: accepted immediately, no confirmation."""
+        now = time.time() if now is None else now
+        self._pending_stage = None
+        if stage != self.current_stage:
+            self._change_stage(stage, now)
 
     def _update_stage(self, stage: str, now: float) -> None:
         if stage == self.current_stage:

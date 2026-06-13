@@ -18,7 +18,8 @@ from . import ocr
 
 _STEPS = [
     ("gold_region", "Drag a box around the GOLD amount, then press Enter"),
-    ("stage_region", "Drag a box around the STAGE number, then press Enter"),
+    ("stage_region", "Drag a box around the STAGE number, then press Enter "
+                     "— or press S to skip and type the stage in the meter"),
 ]
 
 
@@ -61,6 +62,8 @@ class Calibrator:
         self.canvas.bind("<B1-Motion>", self._on_drag)
         self.root.bind("<Return>", self._on_confirm)
         self.root.bind("<Escape>", lambda e: self.root.destroy())
+        self.root.bind("s", self._on_skip)
+        self.root.bind("S", self._on_skip)
 
         self._show_step()
 
@@ -113,10 +116,24 @@ class Calibrator:
             self.preview.config(text="Draw a selection first (click and drag).")
             return
         setattr(self.cfg, _STEPS[self.step][0], self.selection)
-        self.step += 1
         if self.rect_id is not None:
             self.canvas.itemconfig(self.rect_id, outline="#30c030")
             self.rect_id = None
+        self._advance()
+
+    def _on_skip(self, _event=None) -> None:
+        # Only the stage region is optional — gold must be calibrated.
+        if _STEPS[self.step][0] != "stage_region":
+            return
+        self.cfg.stage_region = Region()
+        if self.rect_id is not None:
+            self.canvas.delete(self.rect_id)
+            self.rect_id = None
+        print("Stage region skipped — type the stage in the meter window.")
+        self._advance()
+
+    def _advance(self) -> None:
+        self.step += 1
         if self.step >= len(_STEPS):
             self.cfg.save()
             self.root.destroy()
